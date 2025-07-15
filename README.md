@@ -25,23 +25,23 @@ This project analyzes Chicago road traffic crash data to identify key risk facto
 
 ### Sample Visualizations
 
-![Distribution of injury severity](vizzes\Distribution of injury severity.png)
+![Distribution of injury severity](vizzes/Distribution of injury severity.png)
 
-![Injury severity by sex](vizzes\Injury severity among Sexes.png)
+![Injury severity by sex](vizzes/Injury severity among Sexes.png)
 
-![Age vs. injury severity](vizzes\Age vs. injury severity.png)
+![Age vs. injury severity](vizzes/Age vs. injury severity.png)
 
-![Posted speed limit vs. injury severity](vizzes\Speed Limit by Injury Severity.png)
+![Posted speed limit vs. injury severity](vizzes/Speed Limit by Injury Severity.png)
 
 ![Correlation matrix of numerical features](vizzes/Correlation matrix of numerical features.png)
 
-![Crash frequency by day of week and hour](vizzes\Crash Frequency - Day of week vs Hour.png)
+![Crash frequency by day of week and hour](vizzes/Crash Frequency - Day of week vs Hour.png)
 
-![Injury severity by weather condition](vizzes\Injury severity by weather condition.png)
+![Injury severity by weather condition](vizzes/Injury severity by weather condition.png)
 
-![Age vs. total injuries](vizzes\Age vs. Total Injuries.png)
+![Age vs. total injuries](vizzes/Age vs. Total Injuries.png)
 
-![Crash counts by hour](vizzes\Number of Crashes per Hour.png)
+![Crash counts by hour](vizzes/Number of Crashes per Hour.png)
 
 ### Insights
 
