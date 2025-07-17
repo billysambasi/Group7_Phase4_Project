@@ -123,3 +123,184 @@ class CrashDataProcessor:
             print(remaining)
         else:
             print("Data cleaned. No remaining missing values.")
+
+
+# Binary Classification Crash Modeling Classes
+# Required Libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, ConfusionMatrixDisplay
+from xgboost import XGBClassifier
+import lime
+import lime.lime_tabular
+
+
+# Binary Target Mapping Function
+
+def binary_injury_classification(df):
+    binary_map = {
+        "FATAL": "SEVERE",
+        "INCAPACITATING INJURY": "SEVERE",
+        "NONINCAPACITATING INJURY": "NON-SEVERE",
+        "REPORTED, NOT EVIDENT": "NON-SEVERE",
+        "NO INDICATION OF INJURY": "NON-SEVERE"
+    }
+    df = df.copy()
+    df["BINARY_INJURY"] = df["MOST_SEVERE_INJURY"].map(binary_map)
+    return df
+
+
+# Base Pipeline Class
+
+class BaseModelPipeline:
+    def __init__(self, model, model_name, preprocessor):
+        self.model_name = model_name
+        self.pipeline = Pipeline([
+            ("preprocessor", preprocessor),
+            ("classifier", model)
+        ])
+
+    def train(self, X_train, y_train):
+        self.pipeline.fit(X_train, y_train)
+
+    def evaluate(self, X_test, y_test):
+        y_pred = self.pipeline.predict(X_test)
+        print(f"\n{self.model_name} Classification Report:")
+        print(classification_report(y_test, y_pred))
+        return y_pred
+
+    def get_pipeline(self):
+        return self.pipeline
+
+
+# Grid Search Wrapper Class
+
+class ModelWithGridSearch:
+    def __init__(self, model_name, pipeline, param_grid):
+        self.model_name = model_name
+        self.grid_search = GridSearchCV(
+            pipeline,
+            param_grid=param_grid,
+            cv=3,
+            n_jobs=-1,
+            verbose=1
+        )
+
+    def train(self, X_train, y_train):
+        self.grid_search.fit(X_train, y_train)
+        print(f"\nBest Params for {self.model_name}: {self.grid_search.best_params_}")
+
+    def evaluate(self, X_test, y_test):
+        y_pred = self.grid_search.predict(X_test)
+        print(f"\n{self.model_name} Classification Report:")
+        print(classification_report(y_test, y_pred))
+        return y_pred
+
+    def get_pipeline(self):
+        return self.grid_search.best_estimator_
+
+
+# Model Result Manager
+
+class ModelManager:
+    def __init__(self):
+        self.model_results = {}
+
+    def add_model_result(self, name, y_pred, y_test):
+        self.model_results[name] = {
+            "pred": y_pred,
+            "truth": y_test
+        }
+
+    def plot_results(self):
+        scores = {
+            name: accuracy_score(res["truth"], res["pred"])
+            for name, res in self.model_results.items()
+        }
+        plt.figure(figsize=(10, 6))
+        sns.barplot(x=list(scores.keys()), y=list(scores.values()), palette='Set2')
+        plt.ylabel("Accuracy")
+        plt.title("Model Accuracy Comparison")
+        plt.ylim(0, 1)
+        plt.xticks(rotation=30)
+        plt.grid(axis='y')
+        plt.show()
+
+    def plot_confusion_matrices(self):
+        for name, res in self.model_results.items():
+            cm = confusion_matrix(res["truth"], res["pred"])
+            disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+            disp.plot(cmap='Blues')
+            plt.title(f"{name} - Confusion Matrix")
+            plt.grid(False)
+            plt.show()
+
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import make_scorer, recall_score, classification_report
+
+class RecallGridSearch:
+    def __init__(self, model_name, pipeline, param_grid, scoring=None):
+        self.model_name = model_name
+        self.grid_search = GridSearchCV(
+            pipeline,
+            param_grid=param_grid,
+            scoring=scoring,
+            cv=3,
+            n_jobs=-1,
+            verbose=1
+        )
+
+    def train(self, X_train, y_train):
+        self.grid_search.fit(X_train, y_train)
+        print(f"\nBest Params for {self.model_name}: {self.grid_search.best_params_}")
+
+    def evaluate(self, X_test, y_test):
+        y_pred = self.grid_search.predict(X_test)
+        print(f"\n{self.model_name} Classification Report:")
+        print(classification_report(y_test, y_pred))
+        return y_pred
+
+    def get_pipeline(self):
+        return self.grid_search.best_estimator_
+
+
+# LIME Explainer Class
+
+class LimeExplainer:
+    def __init__(self, fitted_pipeline, class_names, X_train):
+        self.class_names = class_names
+        self.pipeline = fitted_pipeline
+        self.preprocessor = self.pipeline.named_steps['preprocessor']
+        self.classifier = self.pipeline.named_steps['classifier']
+
+        X_transformed = self.preprocessor.transform(X_train)
+        feature_names = self.preprocessor.get_feature_names_out()
+
+        self.explainer = lime.lime_tabular.LimeTabularExplainer(
+            training_data=X_transformed,
+            feature_names=feature_names,
+            class_names=class_names,
+            mode='classification'
+        )
+
+    def explain_instance(self, sample_row):
+        sample_transformed = self.preprocessor.transform(sample_row)
+        predict_fn = lambda x: self.classifier.predict_proba(x)
+        explanation = self.explainer.explain_instance(
+            data_row=sample_transformed[0],
+            predict_fn=predict_fn,
+            num_features=10
+        )
+        return explanation
